@@ -1,0 +1,179 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<DbExplorer version="2">
+  <Root>
+    <children>
+      <node id="Databases">All databases</node>
+      <node id="Search">Search</node>
+      <node id="System" expand="true">System</node>
+      <node id="Useful">Useful</node>
+    </children>
+  </Root>
+
+  <Search >
+    <children>
+      <node id="Search.Accounts">Accounts</node>
+    </children>
+  </Search>
+
+  <Search.Accounts >
+    <get view="search">
+      <input prompt="Account:" comment="Account Id or name" />
+      <query>
+        select 'Search.Test', 1, 'This is a search result'
+        union
+        select 'Search.Test', 2, 'Here is another result'
+      </query>
+    </get>
+  </Search.Accounts>
+
+  <System>
+    <children>
+      <node id="Stuff">Some stuff</node>
+      <node id="More">More stuff</node>
+    </children>
+  </System>
+
+  <Useful >
+    <children>
+      <node id="Thing1">Useful thing 1</node>
+      <node id="Thing2">Useful thing 2</node>
+    </children>
+  </Useful>
+
+  <Databases >
+    <get view="grid">
+      <query>
+        SELECT name
+        FROM master..sysdatabases
+        ORDER BY name
+      </query>
+    </get>
+    <children>
+      <query>
+        SELECT 'Database', name
+        FROM master..sysdatabases
+        ORDER BY name
+      </query>
+    </children>
+  </Databases>
+
+  <Database >
+    <get>
+      <query>
+        select * from sys.databases o where o.name = '{1}'
+      </query>
+    </get>
+    <children>
+      <node id="Database.StoredProcLines">Stored procedure line counts</node>
+      <node id="Tables">Tables</node>
+    </children>
+  </Database>
+
+  <Tables >
+    <children>
+      <query>
+        select 'Table', '{1}', o.object_id, 50, o.name from {1}.sys.tables o where o.is_ms_shipped = 0 order by o.name
+      </query>
+    </children>
+  </Tables>
+
+  <Table >
+    <get view="grid">
+      <query>
+        select top {3} * from {1}..{4}
+      </query>
+    </get>
+    <children>
+      <node id="Columns">Columns</node>
+      <node id="Indexes">Indexes</node>
+      <query nodeStyle="static">
+        select 'StoredProc.Refs', '{1}', '', '{2}', 'Stored proc references'
+      </query>
+    </children>
+  </Table>
+
+  <Columns >
+    <get view="grid">
+      <query>
+        select t.name +
+        case t.name
+        when 'decimal' then '(' + rtrim(o.precision) + ', ' + rtrim(o.scale) + ')'
+        when 'varchar' then '(' + rtrim(o.max_length) + ')'
+        else ''
+        end 'Type',
+        case when o.is_identity = 1 then 'Identity, ' else '' end +
+        case when o.is_nullable = 1 then 'Null' else 'Not Null' end 'Info',
+        o.*
+        from {1}.sys.columns o
+        left join {1}.sys.types t on t.system_type_id = o.system_type_id
+        where o.object_id = {2}
+        order by column_id
+      </query>
+    </get>
+  </Columns>
+
+  <Indexes >
+    <get view="grid">
+      <query>
+        SELECT ind.name 'Index',
+        substring(
+        (select ', ' + col.name + case when is_descending_key = 1 then ' (desc)' else '' end AS [text()]
+        from {1}.sys.index_columns ic
+        INNER JOIN {1}.sys.columns col ON ic.object_id = col.object_id and ic.column_id = col.column_id
+        where ind.object_id = ic.object_id and ind.index_id = ic.index_id and is_included_column = 0
+        for xml path(''))
+        , 2, 8000) 'Indexed',
+        substring(
+        (select ', ' + col.name AS [text()]
+        from {1}.sys.index_columns ic
+        INNER JOIN {1}.sys.columns col ON ic.object_id = col.object_id and ic.column_id = col.column_id
+        where ind.object_id = ic.object_id and ind.index_id = ic.index_id and is_included_column = 1
+        for xml path(''))
+        , 2, 8000) 'Included'
+        from {1}.sys.indexes ind
+        where ind.object_id = {2} and ind.name is not null and ind.is_unique_constraint = 0
+      </query>
+    </get>
+  </Indexes>
+
+  <Database.StoredProcLines >
+    <get view="grid">
+      <query>
+        declare @search varchar(50) = '%[ABCDEFGHIJKLMNOPQRSTUVWXYZ]%'
+
+        SELECT isnull(s.name, '** Total **') 'Schema', isnull(groupname.name, '** Total **') 'Grouping', sum(newlines.count) 'Count'
+        from {1}.sys.procedures p
+        left join {1}.sys.schemas s on p.schema_id = s.schema_id
+        left join {1}.sys.sql_modules sm on sm.object_id = p.object_id
+        cross apply (
+        select p.name COLLATE SQL_Latin1_General_CP1_CS_AS 'name',
+        LEFT(p.name, charindex('_', p.name)) 'leftpart1'
+        ) as casesensitive
+        cross apply (
+        select PATINDEX(@search, casesensitive.name) 'position'
+        ) as capital1
+        cross apply (
+        select RIGHT(p.name, len(p.name) - capital1.position) 'name'
+        ) as rightpart
+        cross apply (
+        select PATINDEX(@search, rightpart.name COLLATE SQL_Latin1_General_CP1_CS_AS) 'position'
+        ) as capital2
+        cross apply (
+        select
+        case
+        when LEFT(p.name, 4) = 'proc' and CHARINDEX('_', p.name) > 5 then casesensitive.leftpart1
+        when capital1.position + capital2.position = 0 then p.name
+        else LEFT(p.name, capital1.position + capital2.position - 1)
+        end 'name'
+        ) as groupname
+        cross apply (
+        select len(sm.definition) - len(replace(sm.definition, CHAR(13), '')) 'count'
+        ) as newlines
+        where p.is_ms_shipped = 0 and p.name not like 'dt_%'
+        group by grouping sets ((s.name), (s.name, groupname.name), ())
+        order by grouping(s.name) desc, s.name, grouping(groupname.name) desc, groupname.name
+      </query>
+    </get>
+  </Database.StoredProcLines>
+
+</DbExplorer>

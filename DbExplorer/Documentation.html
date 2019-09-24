@@ -1,0 +1,102 @@
+﻿<h2>What’s its purpose?</h2>
+<ul>
+  <li>Make databases easily navigable</li>
+  <li>Useful search capability</li>
+  <li>Crazy database interpretation</li>
+  <li>Repository for useful SQL queries</li>
+</ul>
+
+<h2>Color/font coding:</h2>
+<p>The font in the tree view can be controlled, and is intended to convey the following information:</p>
+<ul>
+  <li>Black text - static information (eg. "Customers")</li>
+  <li>Blue text - dynamic information from the database, representing a logical child of the parent node</li>
+  <li>
+    Italic text - dynamic information from the database that is not a logical child.<br/>
+    Most often used as a link up to the parent. Therefore if a search returns a tax service, you can expand it and one of the child nodes will point you
+    'up' to the client file. Of course you could then expand that down to the same tax service, expand it back to the client file, etc etc.
+  </li>
+</ul>
+
+<h2>Main features:</h2>
+<ul>
+  <li>
+    Database selection at the top<br/>
+    Nothing much happens until you connect to a database
+  </li>
+  <li>
+    Tree on the left, detail on the right<br/>
+    Click on a node in the tree to show the detail. Click on the “+” in the tree to show child nodes.
+  </li>
+  <li>
+    Detail format varies based on content<br/>
+    When looking at a single record, you will see a “property inspector” (if you click on a column name and copy, it will copy the value, not the name). When looking at multiple records, you will see a “grid”. Click on column headings to sort. Some nodes display HTML, so the system can extract and display compressed PDFs stored in the database (eg. see Documents under a given Customer). In this case, the tree node will generally be called “Document view”.
+  </li>
+  <li>Drill down from Customer to Dealer to Adviser (etc) in the same manner as Tim Steele’s Data Map</li>
+  <li>
+    Useful search capability<br/>
+    For example, enter a name or number, and it will find all relevant records across all account types and party records.
+  </li>
+  <li>
+    Crazy database interpretation<br/>
+    It knows that tblAccount contains lots of different record types, and will label them appropriately and treat them as they actually are. So if you search for “Blight” it might return an Adviser and a Tax Service. Each will be labelled appropriately, and expanding their nodes will show relevant child data based on record type.
+  </li>
+  <li>
+    Repository for useful SQL queries<br/>
+    You can easily view and copy the SQL used to display database records and to find child records.
+  </li>
+  <li>
+    The code to interpret cryptic columns has be included<br/>
+    For example, vchCreatedByUser in tblModelPortfolio contains O:1053729:RICPRODAPP04:22932:AVANTEOS\svcAppLive:RICPRODAPP|ModelPortfoli|22932, but the detail view shows that this is logon ABejinFW. Similarly, in the same table, from the model portfolio owner id, it tells you their name and type (eg. Adviser).
+  </li>
+  <li>
+    Foreign key details generally included<br/>
+    For example, in SQL you see the account status id. Nobody bothers joining to the account status table for a temporary query, but this generally has it. So when you search for an account, you also see details of related records including lookup tables and 1:1 relationships.
+  </li>
+  <li>
+    It shows records for Synergy and the Data Layer too!<br/>
+    You know you want it.
+  </li>
+  <li>
+    You can add your own personal queries<br/>
+    Let’s cross that bridge when you get to it. You need to have a level of understanding of the way the program works to create the necessary XML file.
+  </li>
+</ul>
+
+<h2>Other features:</h2>
+<ul>
+  <li>
+    Crawl back up the tree<br/>
+    If you search and find a Tax Service, you can go up to the Client File. From there, use a similar technique to go up to the Adviser, then Dealer, then Customer.
+  </li>
+  <li>
+    Paste multiple lines into “Quick search”<br/>
+    For example, if you copy a bunch of account numbers from separate rows in SQL results (or Excel), when you paste them into the search, they will automatically be comma separated. Nice.
+  </li>
+  <li>
+    The SQL for populating tree children can be changed<br/>
+    There is often a limit on the maximum number of child nodes retrieved. If so, there will be some indication (eg. occurs 250, latest 20). Under the “SQL” tab you can change the query and re-execute. This is mainly done to change the number of records returned, but you can also change the WHERE clause. If you change the columns returned, results will be unpredictable at best.
+  </li>
+  <li>
+    Hold Shift while expanding/collapsing a tree node to forget contents<br/>
+    When you expand a tree node for the first time it gets the results from the database. However, if you then collapse and re-expand, it does not refresh the data. If you want to force this to happen, hold Shift.
+  </li>
+  <li>If a tree node has child nodes, (generally) the number of children is shown</li>
+  <li>
+    Zoom by holding Ctrl and scrolling the middle mouse button<br/>
+    The tree view zooms dynamically, but the detail view only zooms once you release Ctrl, as its performance is poor. It also doesn’t handle setting the row height properly. Don’t blame me; it’s a stock component.
+    <li>Back and Forward buttons to retrace where you’ve been like a browser does</li>
+  </ul>
+
+<h2>Gotchas:</h2>
+<ul>
+  <li>Yeah I got lazy. The database access is done on the main thread, so it blocks the UI.</li>
+</ul>
+
+<h2>Development opportunities</h2>
+<ul>
+  <li>
+    Some form of tree node search would be nice<br/>
+    For example if you type in “fee” it would show you all of the paths to which fee details can be provided.
+  </li>
+</ul>
