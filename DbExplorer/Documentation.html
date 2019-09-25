@@ -32,46 +32,32 @@
     Detail format varies based on content<br/>
     When looking at a single record, you will see a “property inspector” (if you click on a column name and copy, it will copy the value, not the name). When looking at multiple records, you will see a “grid”. Click on column headings to sort. Some nodes display HTML, so the system can extract and display compressed PDFs stored in the database (eg. see Documents under a given Customer). In this case, the tree node will generally be called “Document view”.
   </li>
-  <li>Drill down from Customer to Dealer to Adviser (etc) in the same manner as Tim Steele’s Data Map</li>
-  <li>
+    <li>
     Useful search capability<br/>
-    For example, enter a name or number, and it will find all relevant records across all account types and party records.
+    For example, enter a name or number, and it will find all relevant records across different tables.
   </li>
-  <li>
-    Crazy database interpretation<br/>
-    It knows that tblAccount contains lots of different record types, and will label them appropriately and treat them as they actually are. So if you search for “Blight” it might return an Adviser and a Tax Service. Each will be labelled appropriately, and expanding their nodes will show relevant child data based on record type.
-  </li>
-  <li>
+    <li>
     Repository for useful SQL queries<br/>
     You can easily view and copy the SQL used to display database records and to find child records.
   </li>
-  <li>
-    The code to interpret cryptic columns has be included<br/>
-    For example, vchCreatedByUser in tblModelPortfolio contains O:1053729:RICPRODAPP04:22932:AVANTEOS\svcAppLive:RICPRODAPP|ModelPortfoli|22932, but the detail view shows that this is logon ABejinFW. Similarly, in the same table, from the model portfolio owner id, it tells you their name and type (eg. Adviser).
+    <li>
+    Foreign key details can be included<br/>
+    For example, in SQL you might see the account status id. Nobody bothers joining to the account status table for a temporary query, but this can easily include it.
   </li>
-  <li>
-    Foreign key details generally included<br/>
-    For example, in SQL you see the account status id. Nobody bothers joining to the account status table for a temporary query, but this generally has it. So when you search for an account, you also see details of related records including lookup tables and 1:1 relationships.
-  </li>
-  <li>
-    It shows records for Synergy and the Data Layer too!<br/>
-    You know you want it.
-  </li>
-  <li>
+    <li>
     You can add your own personal queries<br/>
     Let’s cross that bridge when you get to it. You need to have a level of understanding of the way the program works to create the necessary XML file.
   </li>
 </ul>
 
-<h2>Other features:</h2>
+<h2>Other ideas:</h2>
 <ul>
   <li>
     Crawl back up the tree<br/>
-    If you search and find a Tax Service, you can go up to the Client File. From there, use a similar technique to go up to the Adviser, then Dealer, then Customer.
-  </li>
+      A child can show a link up to the parent. So if a search returns results down in a hierarchy, you can use this to navigate back up.</li>
   <li>
-    Paste multiple lines into “Quick search”<br/>
-    For example, if you copy a bunch of account numbers from separate rows in SQL results (or Excel), when you paste them into the search, they will automatically be comma separated. Nice.
+    Paste multiple lines into “Search”<br/>
+    For example, if you copy a bunch of numbers from separate rows in SQL results (or Excel), when you paste them into the search, they will automatically be comma separated. Nice.
   </li>
   <li>
     The SQL for populating tree children can be changed<br/>
@@ -81,22 +67,259 @@
     Hold Shift while expanding/collapsing a tree node to forget contents<br/>
     When you expand a tree node for the first time it gets the results from the database. However, if you then collapse and re-expand, it does not refresh the data. If you want to force this to happen, hold Shift.
   </li>
-  <li>If a tree node has child nodes, (generally) the number of children is shown</li>
+  <li>If a tree node has child nodes, you can include the number of children </li>
   <li>
     Zoom by holding Ctrl and scrolling the middle mouse button<br/>
     The tree view zooms dynamically, but the detail view only zooms once you release Ctrl, as its performance is poor. It also doesn’t handle setting the row height properly. Don’t blame me; it’s a stock component.
     <li>Back and Forward buttons to retrace where you’ve been like a browser does</li>
-  </ul>
-
-<h2>Gotchas:</h2>
-<ul>
-  <li>Yeah I got lazy. The database access is done on the main thread, so it blocks the UI.</li>
 </ul>
 
-<h2>Development opportunities</h2>
+<h2>Color/font coding:</h2>
+<p>
+    The font in the tree view can be controlled, and is intended to convey the following information:</p>
 <ul>
-  <li>
-    Some form of tree node search would be nice<br/>
-    For example if you type in “fee” it would show you all of the paths to which fee details can be provided.
-  </li>
+    <li>Black text - static information (eg. &quot;Customers&quot;) </li>
+    <li>Blue text - dynamic information from the database, representing a logical child of the parent node </li>
+    <li>Italic text - dynamic information from the database that is not a logical child.
+        <p>
+            Most often used as a link up to the parent. Therefore if a search returns a tax service, you can expand it and one of the child nodes will point you &#39;up&#39; to the client file. Of course you could then expand that down to the same tax service, expand it back to the client file, etc etc.</p>
+    </li>
+    <li>Bold text - used to draw your eye to the most likely tree node you want to use next. </li>
 </ul>
+
+<h2>5 How it works:</h2>
+<p>
+    It is driven from one XML file called &quot;DbExplorer.xml&quot; that must be in an &quot;xml&quot; folder under the executable file&#39;s path. This can (and does) refer to other XML files - the original intention was to try to separate different platform domains into different files. Another day perhaps.
+</p>
+<p>
+    The process is simple, but not easy to document. Open &quot;DbExplorer.xml&quot; in Notepad++ or some other editor that colour-codes XML, so you can actually see examples while reading this.
+</p>
+
+<h3>5.1 lt;dr</h3>
+The abbreviated version is: Your SQL to display child nodes returns multiple rows, where each row will be a new node in the tree. The first column of each row defines the node in the XML file for that row. So if the SQL returned:
+<p>
+</p>
+<pre>	Customer; 123; Mr Big
+	Customer; 456; Mrs Biggins
+  Company; 1; The Big Company</pre>
+<p>
+</p>
+Then the tree will be populated with three new nodes, two defined at /DbExplorer/Customer and the third at /DbExplorer/Company. Each node will remember the column values as parameters, and use the last column as the text for the node. Those definitions will optionally include: <ul>
+    <li>get - how to display the node on the detail screen using the parameters. </li>
+    <li>children - how to display child nodes under this new node using the parameters. </li>
+</ul>
+Rinse and repeat.
+
+<h3>5.2 Base rules of DbExplorer.xml</h3>
+<ol>
+    <li>The first node it looks for is /DbExplorer/Root (ie. a top-level node called &quot;DbExplorer&quot; that has a subnode called &quot;Root&quot;). </li>
+    <li>It then expects to find &quot;get&quot; and &quot;children&quot; subnodes.
+        <p>
+            The &quot;get&quot; node defines how to present the detail view for each tree node, and the &quot;children&quot; node defines how to present the nodes beneath the tree node when it is expanded.</p>
+    </li>
+    <li>Each of these can contain subnodes called &quot;node&quot;, &quot;query&quot; or &quot;queryRef&quot;.
+        <ul>
+            <li>&quot;node&quot; is to define static text, and is therefore only useful under &quot;children&quot;. </li>
+            <li>&quot;query&quot; is used to run SQL and present the results. </li>
+            <li>&quot;queryRef&quot; is used to reference another node anywhere in the file, and use its &quot;query&quot; subnodes to present results. </li>
+        </ul>
+    </li>
+    <li>Each of the above nodes can contain one or more &quot;param&quot; subnodes.
+        <p>
+            These are not normally required, because the parameters are normally supplied through the SQL (see later).</p>
+    </li>
+</ol>
+
+<h3>5.3 Parameters</h3>
+The tree structure is driven by data stored on each node. You can see this data at the bottom right of the screen when a node is selected. It shows as semi-colon separated fields, but they&#39;re actually stored in a list, and displayed with semi-colons. So, for example, a node might contain the following:
+<p>
+    <code>Customer; 123; Mr Big</code></p>
+Any SQL that runs on these nodes will use these values as parameters. Parameters are referenced in SQL as {0}, {1}, {2} etc. Parameters use the following rules: <ol>
+    <li>The first parameter is the XML node name
+        <p>
+            So when you click on this node, the app will look for /DbExplorer/Customer to know what to do.
+        </p>
+        <p>
+        </p>
+    </li>
+    <li>The last parameter is what gets displayed in the tree as the title of the node. </li>
+    <li>The parameters in between can be anything you like.
+        <p>
+            In this case, we&#39;re working with a Customer, so the id of the customer is probably going to be useful. If you look at the /DbExplorer/Customer/get node, which will be used when you click on the node, you will see SQL that retrieves the Customer. For example:
+        </p>
+        <p>
+            <code>select * from Customer where id = {1}</code></p>
+    </li>
+</ol>
+
+<h3>5.4 Expectation of expanding children</h3>
+When expanding a node, the app expects to be provided with the parameters for each child.
+<ul>
+    <li>&quot;node&quot; takes the format:
+        <p>
+            <code>&lt;node id=&quot;param0&quot;&gt;paramLast&lt;/node&gt;</code> or
+        </p>
+        <p>
+            <code>&lt;node id=&quot;param0&quot;&gt;paramLast &lt;param&gt;param1&lt;/param&gt; &lt;param&gt;param2&lt;/param&gt;<i> (etc.) </i>&lt;/node&gt;</code></p>
+        So &quot;param0&quot; is the node name to be located in the XML file as /DbExplorer/param0 and &quot;paramLast&quot; is whatever you want displayed on screen. </li>
+    <li>&quot;query&quot; takes the format:
+        <p>
+            <code>&lt;query&gt;<i>sql</i>&lt;/query&gt;</code></p>
+        The SQL is responsible for providing all of the parameters. So for example, if returning Customers, the SQL would be along the lines of:
+        <p>
+            <code>select &#39;Customer&#39;, id, name
+            <br />
+            from Customer </code>
+        </p>
+        The above example would have three parameters, which would be referred to as {0}, {1} and {2} in any lower level SQL within /DbExplorer/{0}. If the &quot;query&quot; node also contained &quot;param&quot; subnodes, these would be added to the end of the parameters (ie. starting at {4} in this case). </li>
+    <li>&quot;queryRef&quot; takes the format: <p>
+            <code>&lt;queryRef xpath=&quot;someXPath&quot; /&gt;</code> or
+        </p>
+        <p>
+            <code>&lt;queryRef xpath=&quot;someXPath&quot;&gt;paramLast &lt;param&gt;param1&lt;/param&gt; &lt;param&gt;param2&lt;/param&gt;<i> (etc.) </i>&lt;/queryRef&gt;</code></p>
+        Where &quot;someXPath&quot; goes off to some other part of the XML file to find &quot;query&quot; nodes. </li>
+</ul>
+
+<h3>5.5 Attributes</h3>
+This section describes the attributes that can occur on each of the nodes in the XML file.
+
+<h4>5.5.1 Attributes on &quot;get&quot;</h4>
+<ul>
+    <li><code>&lt;get <b>view=&quot;search&quot;</b>&gt;</code>
+        <p>
+            This is discussed in the following section.</p>
+    </li>
+    <li><code>&lt;get <b>view=&quot;grid&quot;</b>&gt;</code>
+        <p>
+            Each query within &quot;get&quot; normally must only return one row. However, in the grid view, multiple rows can be displayed. There currently aren&#39;t any instances of multiple queries within a grid view, so who knows what would happen.</p>
+    </li>
+    <li><code>&lt;get <b>view=&quot;gridTranspose&quot;</b>&gt;</code>
+        <p>
+            This was a nice theory at the time. It&#39;s intended to be the same as grid, but with the rows and columns swapped. The need went away, and so it may not work properly.</p>
+    </li>
+    <li><code>&lt;get <b>view=&quot;browser&quot;</b>&gt;</code>
+        <p>
+            This will show the results in a browser. This can be used for displaying HTML, or other browser-viewable data such as PDFs. The &quot;query&quot; node in this case must contain at least three columns, the first two of which are an integer type and the MIME type.</p>
+        <ul>
+            <li>Type 1 means the data in the third column is the actual data (eg. HTML text or PDF data). The data can optionally be compressed in GZIP format. </li>
+            <li>Type 2 means the data in the third column is a string containing a filename including path to display. </li>
+            <li>Type 3 means the data in the third column is a string containing a filename excluding path to display. Subsequent columns contain path strings. The app will search each path for the filename and display the first it finds. </li>
+        </ul>
+    </li>
+</ul>
+
+<h4>5.5.2 Attributes on &quot;query&quot; under &quot;children&quot;</h4>
+<ul>
+    <li><code>&lt;children&gt;&lt;query <b>nodeStyle=&quot;static|bold|up&quot;</b>&gt;</code>
+        <p>
+            This controls how the node&#39;s label should be shown in the tree.</p>
+        <ul>
+            <li><i>default</i> - if missing, the text will be blue. </li>
+            <li>static - black text, to emulate a static &quot;node&quot; text even though a query is running. </li>
+            <li>bold - make the node bold so it stands out visually. </li>
+            <li>up - italic text to indicate this is not really a logical child relationship in the database. Often used to point a node back to the parent for when you&#39;ve reached the node directly through a search. </li>
+        </ul>
+    </li>
+    <li><code>&lt;children&gt;&lt;query <b>showTitle=&quot;true&quot;</b>&gt;</code>
+        <p>
+            This is used to prefix the node in the tree with the title. It is useful for when a search can return multiple record types, to give a visual indication as to what has been found. For example, if a query with this set returns:</p>
+        <p>
+            <code>Customer; 123; Mr Big</code></p>
+        And the relevant XML is defined as: <p>
+            <code>&lt;Customer title=&quot;A customer record&quot;&gt;...</code></p>
+        Then the node in the tree will display as:
+        <p>
+            <code>(A customer record) Mr Big</code></p>
+    </li>
+</ul>
+
+<h4>5.5.3 Attributes on &quot;query&quot; under &quot;get&quot;</h4>
+<ul>
+    <li><code>&lt;get&gt;&lt;query <b>name=&quot;<i>whatever</i>&quot;</b>&gt;</code>
+        <p>
+            This is only applicable when the queries under the &quot;get&quot; return no more than one record each. It is used to name that section in the detail view, and is often used to show the name of the table returned. The standard .Net property inspector is used in the detail, and unfortunately it seems to ignore this if there&#39;s only one. Consequently, you need to have at least two &quot;query&quot; nodes to see this effect.</p>
+    </li>
+</ul>
+
+<h4>5.5.4 Other attributes</h4>
+<ul>
+    <li><code>&lt;query <b>ignoreErrors=&quot;true&quot;</b>&gt;</code>
+        <p>
+            Can be under &quot;get&quot; or &quot;children&quot; to ignore any errors returned by the query. This can be used when SQL that runs on one database may fail on another (eg. table existence or permissions).</p>
+    </li>
+    <li><code>&lt;query <b>expand=&quot;true&quot;</b>&gt;</code><br />
+        <code>&lt;queryRef <b>expand=&quot;true&quot;</b>&gt;</code><br />
+        <code>&lt;node <b>expand=&quot;true&quot;</b>&gt;</code>
+        <p>
+            When populating the children for a node, if any of their definitions have expand set to true, those children will be expanded. Very dangerous if this ends up with a circular reference. For example, if a client file automatically expanded tax services, and each one automatically expanded the parent client file.</p>
+    </li>
+    <li><code>&lt;queryRef <b>cascadeKeys=&quot;false&quot;</b>&gt;</code><br />
+        <code>&lt;node <b>cascadeKeys=&quot;false&quot;</b>&gt;</code>
+        <p>
+            The normal behaviour is for &quot;node&quot; and &quot;queryRef&quot; to copy their current parameters down to any children for their use. Overriding cascadeKeys to false prevents this from happening. Therefore any &lt;param&gt; subnodes will start from {0}.</p>
+    </li>
+    <li><code>&lt;node id=&quot;<i>MyNode</i>&quot; <b>includeUrl=&quot;<i>AnotherFile.xml</i>&quot;</b>&gt;</code><br />
+        <p>
+            This opens the specified file to find the children, once again under /DbExplorere/MyNode.
+        </p>
+    </li>
+</ul>
+
+<h3>5.6 Search</h3>
+The &quot;get&quot; node can contain one other child node that was not mentioned above. If the &quot;get&quot; is a search, then the parameters come from &quot;input&quot; nodes. An example follows:
+<p>
+</p>
+<pre>	  &lt;MyTest &gt;
+&lt;get view=&quot;search&quot;&gt;
+	&lt;input prompt=&quot;Search:&quot; comment=&quot;Part of a customer name&quot; /&gt;
+	&lt;query&gt;
+	select top 20 &#39;Customer&#39;, id, name
+	from Customer
+	where vchAccountName like &#39;%{0}%&#39;
+	&lt;/query&gt;
+&lt;/get&gt;
+&lt;/MyTest&gt;
+</pre>
+<p>
+</p>
+In the above example, whatever is keyed in will be substituted into the SQL. It does not prevent SQL injection or cater for invalid queries - if you entered &quot;O&#39;Keefe&quot;, the app will display the resultant syntax error. If the search contained multiple queries, you would likely get multiple errors.
+
+<h3>5.7 Considerations when writing SQL</h3>
+<ol>
+    <li>The app has not been written to accommodate CDATA, so you cannot include special XML characters. Therefore, if you want to use &quot;&lt;&quot;, you must enter it as &quot;&amp;lt;&quot;. You don&#39;t need to do the same for &quot;&gt;&quot;, but it might aid consistency. Similarly, you need to use &quot;&amp;amp;&quot; to get &quot;&amp;&quot;. </li>
+</ol>
+<h3>5.8 Conventions</h3>
+<ul>
+    <li>XML nodes should have a dummy space at the end.
+        <p>
+            A lot of the nodes are named similarly and have optional attributes. When searching for the &quot;Customer&quot; node in the XML, you would probably type in &quot;&lt;Customer&quot;, and then get annoyed when it finds &quot;&lt;Customers&quot; and &quot;&lt;Customer_AppForm&quot; etc. But if you can rely on there always being a space in the XML, even if attributes do not follow, you can search for &quot;&lt;Customer &quot; to find it directly. This means the XML had to be defined as:
+        </p>
+        <p>
+            <code>&lt;Customer &gt;</code> (see the space!)
+        </p>
+    </li>
+    <li>The parameters can be anything, including SQL
+        <p>
+            It has proven worthwhile to sometimes include part of a WHERE clause as a parameter on a node. This may result in fewer lines of code if multiple nodes only differ slightly. The <code>Accounts_Generic</code> node is such an example.</p>
+    </li>
+</ul>
+
+<h2>6 Development opportunities</h2>
+<ul>
+    <li>Yeah I got lazy. The database access is done on the main thread, so it blocks the UI. It would be nice to fix this. </li>
+    <li>Extend the functionality of the &quot;input&quot; node to allow specification of a format, perhaps as a Regular Expression.
+        <p>
+            This would allow the enforcement of only numbers in a numeric field, or no single quote in a string field.</p>
+    </li>
+    <li>Some form of tree node search would be nice
+        <p>
+            For example if you type in “fee” it would show you all of the paths to which fee details can be provided.</p>
+    </li>
+    <li>Convert to use XSLT
+        <p>
+            I toyed with the idea of changing the whole XML file to use XSLT. This would allow the use of: named templates to house common functions; named parameters rather than the cryptic {0} etc.
+        </p>
+    </li>
+</ul>
+
+
