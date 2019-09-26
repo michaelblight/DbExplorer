@@ -107,10 +107,7 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Documentation.html">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <SubType>Designer</SubType>
-    </Content>
+    <Content Include="Documentation.html" />
     <Content Include="Xml\DbExplorerPersonal.xml">
       <SubType>Designer</SubType>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
